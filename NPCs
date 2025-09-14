@@ -1,0 +1,92 @@
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+-- 初始化全局变量
+getgenv().G = false
+getgenv().Creator = '秋风拂过'
+getgenv().Mode = "Kill"  -- 模式: Kill 或 Heal
+
+-- 主循环函数
+local function mainLoop()
+    while getgenv().G and getgenv().Creator == '秋风拂过' do
+        wait(1)
+        sethiddenproperty(Players.LocalPlayer, "SimulationRadius", 100)
+        sethiddenproperty(Players.LocalPlayer, "MaxSimulationRadius", 100)
+        
+        for _, descendant in pairs(Workspace:GetDescendants()) do 
+            if descendant.ClassName == 'Humanoid' and descendant.Parent.Name ~= Players.LocalPlayer.Name then 
+                if getgenv().Mode == "Kill" then
+                    descendant.Health = -1
+                else
+                    descendant.Health = 9999999999
+                end
+            end
+        end
+    end
+end
+
+-- 创建UI界面
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ScriptController"
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 200, 0, 150)
+Frame.Position = UDim2.new(0, 10, 0, 10)
+Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Frame.Parent = ScreenGui
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Title.Text = "脚本控制器"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Parent = Frame
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0.8, 0, 0, 30)
+ToggleButton.Position = UDim2.new(0.1, 0, 0.3, 0)
+ToggleButton.Text = "启动脚本"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Parent = Frame
+
+local ModeButton = Instance.new("TextButton")
+ModeButton.Size = UDim2.new(0.8, 0, 0, 30)
+ModeButton.Position = UDim2.new(0.1, 0, 0.6, 0)
+ModeButton.Text = "模式: 消灭"
+ModeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ModeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ModeButton.Parent = Frame
+
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(0.8, 0, 0, 20)
+Status.Position = UDim2.new(0.1, 0, 0.8, 0)
+Status.BackgroundTransparency = 1
+Status.Text = "状态: 已停止"
+Status.TextColor3 = Color3.fromRGB(255, 255, 255)
+Status.Parent = Frame
+
+-- 切换脚本状态
+ToggleButton.MouseButton1Click:Connect(function()
+    getgenv().G = not getgenv().G
+    if getgenv().G then
+        ToggleButton.Text = "停止脚本"
+        Status.Text = "状态: 运行中"
+        spawn(mainLoop)
+    else
+        ToggleButton.Text = "启动脚本"
+        Status.Text = "状态: 已停止"
+    end
+end)
+
+-- 切换模式
+ModeButton.MouseButton1Click:Connect(function()
+    if getgenv().Mode == "Kill" then
+        getgenv().Mode = "Heal"
+        ModeButton.Text = "模式: 治疗"
+    else
+        getgenv().Mode = "Kill"
+        ModeButton.Text = "模式: 消灭"
+    end
+end)
