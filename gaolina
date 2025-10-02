@@ -1,0 +1,206 @@
+-- Roblox Player Highlight System - Complete Script
+-- Place this Script in ServerScriptService
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+-- Create RemoteEvents for client-server communication
+local HighlightPlayerEvent = Instance.new("RemoteEvent")
+HighlightPlayerEvent.Name = "HighlightPlayerEvent"
+HighlightPlayerEvent.Parent = ReplicatedStorage
+
+local UnhighlightPlayerEvent = Instance.new("RemoteEvent")
+UnhighlightPlayerEvent.Name = "UnhighlightPlayerEvent"
+UnhighlightPlayerEvent.Parent = ReplicatedStorage
+
+local CharacterClickEvent = Instance.new("RemoteEvent")
+CharacterClickEvent.Name = "CharacterClickEvent"
+CharacterClickEvent.Parent = ReplicatedStorage
+
+local ToggleHighlightEvent = Instance.new("RemoteEvent")
+ToggleHighlightEvent.Name = "ToggleHighlightEvent"
+ToggleHighlightEvent.Parent = ReplicatedStorage
+
+-- Server-side character click handling
+CharacterClickEvent.OnServerEvent:Connect(function(player, clickedCharacter)
+    if not clickedCharacter or not clickedCharacter:IsA("Model") then return end
+    
+    local characterPlayer = Players:GetPlayerFromCharacter(clickedCharacter)
+    if not characterPlayer then return end
+    
+    local clickerCharacter = player.Character
+    if not clickerCharacter then return end
+    
+    local clickerRoot = clickerCharacter:FindFirstChild("HumanoidRootPart")
+    local clickedRoot = clickedCharacter:FindFirstChild("HumanoidRootPart")
+    if not clickerRoot or not clickedRoot then return end
+    
+    local distance = (clickerRoot.Position - clickedRoot.Position).Magnitude
+    if distance > 20 then return end
+    
+    CharacterClickEvent:FireAllClients(player.Name, characterPlayer.Name)
+end)
+
+-- Toggle highlight system
+ToggleHighlightEvent.OnServerEvent:Connect(function(player, enable)
+    if enable then
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+局部突出显示=字符：FindFirstChildWhichIsA("突出显示")
+如果高亮显示，则高亮显示。OutlineColor=Color3.new(0，1，0)end
+结束)
+        end
+    else
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            if otherPlayer ~= player then
+                UnhighlightPlayerEvent:FireClient(player, otherPlayer.Name)
+            end
+        end
+    end
+end)
+
+-- Player management
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            if otherPlayer ~= player then
+                HighlightPlayerEvent:FireClient(otherPlayer, character)
+            end
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(leftPlayer)
+    for _, player in ipairs(Players:GetPlayers()) do
+        UnhighlightPlayerEvent:FireClient(player, leftPlayer.Name)
+    end
+end)
+
+-- Client-side functionality (runs in LocalScript context)
+local function createClientModule()
+    local player = Players.LocalPlayer
+    local playerGui = player:WaitForChild("PlayerGui")
+    
+    -- Highlight function
+    local function addHighlightToCharacter(character)
+        if character:FindFirstChildWhichIsA("Highlight") then return end
+        
+        local highlight = Instance.new("Highlight")
+        highlight.Parent = character
+        highlight.Name = "PlayerHighlight"
+        highlight.OutlineColor = Color3.new(0, 1, 0)
+        highlight.FillColor = Color3.new(0, 1, 0)
+        highlight.FillTransparency = 0.8
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        
+        local billboardGui = Instance.new("BillboardGui")
+        billboardGui.Parent = character:WaitForChild("Head")
+        billboardGui.Adornee = character.Head
+        billboardGui.Size = UDim2.new(0, 100, 0, 40)
+        billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Parent = billboardGui
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = character.Name
+        textLabel.TextColor3 = Color3.new(1, 1, 1)
+        textLabel.TextScaled = true
+        textLabel.Font = Enum.Font.GothamBold
+    end
+
+    -- Click detector function
+    local function addClickDetector(character)
+        local existingDetector = character:FindFirstChildWhichIsA("ClickDetector")
+        if existingDetector then existingDetector:Destroy() end
+        
+        local clickDetector = Instance.new("ClickDetector")
+        clickDetector.Parent = character
+        clickDetector.MaxActivationDistance = 20
+        
+        clickDetector.MouseClick:Connect(function()
+            local localCharacter = player.Character
+            if not localCharacter then return end
+            
+            local humanoid = localCharacter:FindFirstChildWhichIsA("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then return end
+            
+            CharacterClickEvent:FireServer(character)
+        end)
+        
+        clickDetector.MouseHoverEnter:Connect(function()
+            local highlight = character:FindFirstChildWhichIsA("Highlight")
+            if highlight then highlight.OutlineColor = Color3.new(1, 1, 0) end
+        end)
+        
+        clickDetector.MouseHoverLeave:Connect(function()
+            local highlight = character:FindFirstChildWhichIsA("Highlight")
+            if highlight then highlight.OutlineColor = Color3.new(0, 1, 0) end
+        end)
+    end
+
+    -- Create control UI
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "HighlightControlPanel"
+    screenGui.Parent = playerGui
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 200)
+    frame.Position = UDim2.new(0.5, -150, 0, 10)
+    frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+    frame.Parent = screenGui
+    
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Text = "Highlight: ON"
+    toggleButton.Size = UDim2.new(0.8, 0, 0, 40)
+toggleButton.Position=UDim2.new(0.1，0，0.1，0)
+toggleButton.Parent=frame
+    
+toggleButton.Activated:Connect(函数()
+本地isEnabled=toggleButton.Text=="突出显示：ON"
+toggleButton.Text=isEnabled和“突出显示：关”或“突出显示：开”
+ToggleHighlightEvent:FireServer(非isEnabled)
+结束)
+
+--事件处理常式
+HighlightPlayerEvent.OnClientEvent：连接(函数(字符)
+如果字符，则
+字符：WaitForChild("Head")
+addHighlightToCharacter(字符)
+addClickDetector(字符)
+结束
+结束)
+
+UnhighlightPlayerEvent.OnClientEvent:Connect(函数(playerName)
+本地角色model=workspace:FindFirstChild(playerName)
+如果characterModel，则
+局部highlight=characterModel:FindFirstChildWhichIsA("Highlight")
+如果突出显示，则突出显示：destroy()结束
+结束
+结束)
+
+OnClientEvent:Connect(函数(clickerName，clickedName)
+打印(clickerName.."clicked"..clickedName)
+结束)
+
+--为现有播放器初始化
+对于_，ipairs中的otherPlayer(播放器：GetPlayers())
+如果otherPlayer~=player和otherPlayer.字符，则
+addHighlightToCharacter(otherPlayer.性格)
+addClickDetector(otherPlayer.Character)
+结束
+结束
+
+添加的播放器：连接(功能(otherPlayer)
+otherPlayer.CharacterAdded：连接(函数(字符)
+如果otherPlayer~=player，则
+字符：WaitForChild("Head")
+addHighlightToCharacter(字符)
+addClickDetector(字符)
+结束
+结束)
+结束)
+结束
+
+--客户端执行的模块返回
+返回createClientModule
